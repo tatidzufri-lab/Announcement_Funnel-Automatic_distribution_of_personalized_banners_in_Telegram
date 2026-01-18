@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Telegram Bot для автоматической персонализированной воронки анонсов
+с поддержкой профилей брендинга и A/B-тестирования
 """
 
 import asyncio
@@ -13,17 +14,40 @@ from aiogram import Bot
 from aiogram.types import FSInputFile
 from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
 
-from utils import load_users, render_html, html_to_png, get_keyboard, get_random_variant
-from config import BOT_TOKEN, STAGES, SEND_DELAY, VARIANTS
+from utils import (
+    load_users, render_html, html_to_png, get_keyboard, 
+    get_random_variant, list_available_profiles
+)
+from config import (
+    BOT_TOKEN, STAGES, SEND_DELAY, VARIANTS, 
+    load_profile, AVAILABLE_PROFILES
+)
 
 
-async def send_funnel(bot: Bot, users_df, output_dir: str, send_real: bool = False, variant_mode: str = 'fixed'):
+async def send_funnel(bot: Bot, users_df, output_dir: str, send_real: bool = False, 
+                      variant_mode: str = 'fixed', profile: dict = None):
     """
     Отправляет персонализированную воронку пользователям с поддержкой A/B-тестирования
+    и кастомного брендинга.
+    
+    Args:
+        bot: Экземпляр Telegram бота
+        users_df: DataFrame с пользователями
+        output_dir: Директория для сохранения PNG
+        send_real: Отправлять ли реальные сообщения
+        variant_mode: Режим выбора вариантов (fixed/random)
+        profile: Профиль брендинга
     """
-    print(f"Начинаем обработку {len(users_df)} пользователей...")
-    print(f"Режим: {'Отправка' if send_real else 'Тестирование (генерация PNG)'}")
-    print(f"Варианты: {variant_mode}")
+    brand_name = profile.get('brand', {}).get('name', 'Unknown') if profile else 'Default'
+    
+    print(f"\n{'='*60}")
+    print(f"🚀 Запуск воронки анонсов")
+    print(f"{'='*60}")
+    print(f"📊 Пользователей: {len(users_df)}")
+    print(f"📝 Режим: {'Отправка' if send_real else 'Тестирование (генерация PNG)'}")
+    print(f"🎯 Варианты: {variant_mode}")
+    print(f"🎨 Бренд: {brand_name}")
+    print(f"{'='*60}\n")
     
     total_messages = len(users_df) * len(STAGES)
     processed = 0
@@ -43,64 +67,113 @@ async def send_funnel(bot: Bot, users_df, output_dir: str, send_real: bool = Fal
         else:
             variant = row.get('variant', 'a')
         
-        print(f"\nОбрабатываем пользователя: {user_data['name']} (ID: {chat_id}, вариант: {variant.upper()})")
+        print(f"\n👤 {user_data['name']} (ID: {chat_id}, вариант: {variant.upper()})")
         
         for stage in STAGES:
             try:
-                # Рендерим HTML с учетом варианта
-                html_content = render_html(stage, variant, user_data)
+                # Рендерим HTML с учетом варианта и профиля
+                html_content = render_html(stage, variant, user_data, profile)
                 
                 # Конвертируем в PNG с уникальным именем
-                png_path = html_to_png(html_content, f"{stage}_{variant}", chat_id, output_dir, user_data)
+                png_path = html_to_png(
+                    html_content, 
+                    f"{stage}_{variant}", 
+                    chat_id, 
+                    output_dir, 
+                    user_data,
+                    profile
+                )
                 
                 if send_real:
                     # Отправляем через бота
-                    keyboard = get_keyboard(stage, chat_id, user_data['name'])
-                    caption = f"Этап {stage.capitalize()} (вариант {variant.upper()}) для {user_data['name']}"
+                    keyboard = get_keyboard(stage, chat_id, user_data['name'], profile)
                     
                     try:
                         await bot.send_photo(
                             chat_id=chat_id,
                             photo=FSInputFile(png_path),
-                            caption=caption,
                             reply_markup=keyboard
                         )
-                        print(f"✅ Отправлено: {stage}_{variant} для {user_data['name']}")
+                        print(f"   ✅ Отправлено: {stage}_{variant}")
                         
                     except TelegramBadRequest as e:
-                        print(f"❌ Ошибка отправки {stage}_{variant} для {user_data['name']}: {e}")
+                        print(f"   ❌ Ошибка: {e}")
                     except TelegramForbiddenError as e:
-                        print(f"❌ Пользователь {user_data['name']} заблокировал бота: {e}")
+                        print(f"   ❌ Пользователь заблокировал бота")
                     except Exception as e:
-                        print(f"❌ Неожиданная ошибка при отправке {stage}_{variant} для {user_data['name']}: {e}")
+                        print(f"   ❌ Неожиданная ошибка: {e}")
                     
                     # Задержка между отправками
                     await asyncio.sleep(SEND_DELAY)
                 else:
-                    print(f"📸 Сгенерирован: {png_path}")
+                    print(f"   📸 Сгенерирован: {Path(png_path).name}")
                 
                 # Статистика вариантов
                 variant_stats[variant] += 1
                 processed += 1
-                print(f"Прогресс: {processed}/{total_messages}")
                 
             except Exception as e:
-                print(f"❌ Ошибка при обработке {stage}_{variant} для {user_data['name']}: {e}")
+                print(f"   ❌ Ошибка при обработке {stage}_{variant}: {e}")
                 continue
     
-    print(f"\n🎉 Обработка завершена! Обработано {processed} сообщений.")
-    print(f"📊 Статистика вариантов: {variant_stats}")
+    # Итоговая статистика
+    print(f"\n{'='*60}")
+    print(f"🎉 Обработка завершена!")
+    print(f"{'='*60}")
+    print(f"📊 Обработано сообщений: {processed}/{total_messages}")
+    print(f"📈 Статистика вариантов:")
+    for v, count in variant_stats.items():
+        if count > 0:
+            print(f"   Вариант {v.upper()}: {count} сообщений")
+    print(f"📁 PNG сохранены в: {output_dir}/")
+    print(f"{'='*60}\n")
 
 
 async def main():
     """Основная функция"""
-    parser = argparse.ArgumentParser(description='Telegram Bot для воронки анонсов с A/B-тестированием')
-    parser.add_argument('--test', action='store_true', help='Тестовый режим (только генерация PNG)')
-    parser.add_argument('--send', action='store_true', help='Режим отправки сообщений')
+    parser = argparse.ArgumentParser(
+        description='Telegram Bot для воронки анонсов с A/B-тестированием и кастомным брендингом',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Примеры использования:
+  %(prog)s --test                      # Тест с профилем по умолчанию (wellness)
+  %(prog)s --test --brand corporate    # Тест с корпоративным стилем
+  %(prog)s --test --brand luxury       # Тест с люксовым стилем
+  %(prog)s --send --brand creative     # Отправка с креативным стилем
+  %(prog)s --test --brand /path/to/custom.yaml  # Тест с кастомным профилем
+  %(prog)s --list-profiles             # Показать доступные профили
+        """
+    )
+    parser.add_argument('--test', action='store_true', 
+                        help='Тестовый режим (только генерация PNG)')
+    parser.add_argument('--send', action='store_true', 
+                        help='Режим отправки сообщений')
     parser.add_argument('--variant', choices=['fixed', 'random'], default='fixed', 
-                       help='Режим выбора вариантов: fixed (по CSV) или random (случайно)')
+                        help='Режим выбора вариантов: fixed (по CSV) или random (случайно)')
+    parser.add_argument('--brand', type=str, default='custom',
+                        help='Профиль брендинга: custom, wellness, corporate, creative, luxury, tech, minimal или путь к .yaml')
+    parser.add_argument('--list-profiles', action='store_true',
+                        help='Показать список доступных профилей')
     
     args = parser.parse_args()
+    
+    # Показать список профилей
+    if args.list_profiles:
+        print("\n📋 Доступные профили брендинга:\n")
+        profiles = list_available_profiles()
+        for p in profiles:
+            emoji = {
+                'wellness': '🌿',
+                'corporate': '🏢', 
+                'creative': '🎨',
+                'luxury': '👑',
+                'tech': '💻',
+                'minimal': '⬜',
+                'custom': '🎨'
+            }.get(p, '📄')
+            print(f"  {emoji} {p}")
+        print(f"\nИспользование: python3 bot_funnel.py --test --brand <профиль>\n")
+        return
     
     # Определяем режим работы
     if args.send:
@@ -110,13 +183,15 @@ async def main():
         send_real = False
         mode = "тестирования"
     
-    print(f"🚀 Запуск в режиме {mode}")
-    print(f"🎯 Варианты: {args.variant}")
+    print(f"\n🚀 Запуск в режиме {mode}")
+    
+    # Загружаем профиль
+    profile = load_profile(args.brand)
     
     # Проверяем токен бота
     if not BOT_TOKEN:
         print("❌ Ошибка: BOT_TOKEN не найден в переменных окружения")
-        print("Создайте файл .env и добавьте BOT_TOKEN=your_bot_token")
+        print("   Создайте файл .env и добавьте BOT_TOKEN=your_bot_token")
         sys.exit(1)
     
     # Создаем директорию для вывода
@@ -134,8 +209,8 @@ async def main():
         # Создаем бота
         bot = Bot(token=BOT_TOKEN)
         
-        # Запускаем воронку с поддержкой вариантов
-        await send_funnel(bot, users_df, output_dir, send_real, args.variant)
+        # Запускаем воронку с профилем
+        await send_funnel(bot, users_df, output_dir, send_real, args.variant, profile)
         
     except FileNotFoundError as e:
         print(f"❌ Ошибка: {e}")

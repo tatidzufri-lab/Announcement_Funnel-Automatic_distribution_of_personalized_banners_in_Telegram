@@ -3,24 +3,396 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interest A</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>{{ brand.name }} — Interest</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    {% if fonts.google_fonts %}
+    <link href="https://fonts.googleapis.com/css2?family={{ fonts.google_fonts | join('&family=') }}&display=swap" rel="stylesheet">
+    {% else %}
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    {% endif %}
+    
     <style>
+        /* ═══════════════════════════════════════════════════════════════════════════
+           CSS ПЕРЕМЕННЫЕ ИЗ ПРОФИЛЯ
+           ═══════════════════════════════════════════════════════════════════════════ */
         :root {
-            --heading-font: {{ fonts.heading }};
-            --body-font: {{ fonts.body }};
+            /* Шрифты */
+            --font-heading: '{{ fonts.heading | default("Cormorant Garamond") }}', serif;
+            --font-body: '{{ fonts.body | default("Inter") }}', sans-serif;
+            
+            /* Цвета */
+            --color-primary: {{ colors.primary | default('#4A4F46') }};
+            --color-secondary: {{ colors.secondary | default('#A38DA2') }};
+            --color-accent: {{ colors.accent | default('#8CA29B') }};
+            --color-background: {{ colors.background | default('#F5F3EF') }};
+            --color-background-alt: {{ colors.background_alt | default('#E3D6C4') }};
+            --color-text: {{ colors.text_primary | default('#4A4F46') }};
+            --color-text-light: {{ colors.text_secondary | default('#6B7064') }};
+            --color-button-bg: {{ colors.button_bg | default('#8CA29B') }};
+            --color-button-text: {{ colors.button_text | default('#FFFFFF') }};
+            
+            /* Размеры шрифтов */
+            --size-logo: {{ fonts.size_logo | default(28) }}px;
+            --size-title: {{ fonts.size_title | default(42) }}px;
+            --size-subtitle: {{ fonts.size_subtitle | default(26) }}px;
+            --size-body: {{ fonts.size_body | default(18) }}px;
+            --size-small: {{ fonts.size_small | default(14) }}px;
+            
+            /* Карточка */
+            --card-radius: {{ card.border_radius | default(20) }}px;
+            --card-padding: {{ card.padding | default(48) }}px;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════════════
+           БАЗОВЫЕ СТИЛИ
+           ═══════════════════════════════════════════════════════════════════════════ */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            width: {{ image.sizes[image.format][0] | default(1200) }}px;
+            height: {{ image.sizes[image.format][1] | default(630) }}px;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: var(--font-body);
+            font-size: var(--size-body);
+            line-height: {{ fonts.line_height | default(1.6) }};
+            color: var(--color-text);
+            
+            /* Градиентный фон баннера */
+            {% if banner.background.type == 'gradient' %}
+            background: linear-gradient(
+                {{ banner.background.gradient.direction | default('135deg') }},
+                {% for color in banner.background.gradient.colors %}
+                {{ color }}{% if not loop.last %},{% endif %}
+                {% endfor %}
+            );
+            {% else %}
+            background: var(--color-background);
+            {% endif %}
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════════════
+           КАРТОЧКА БАННЕРА
+           ═══════════════════════════════════════════════════════════════════════════ */
+        .banner {
+            position: relative;
+            width: 100%;
+            max-width: 90%;
+            height: auto;
+            min-height: 85%;
+            
+            /* Фон карточки */
+            {% if card.background.type == 'solid' %}
+            background: {{ card.background.color | default('rgba(255, 255, 255, 0.95)') }};
+            {% elif card.background.type == 'blur' %}
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur({{ card.background.backdrop_blur | default(10) }}px);
+            -webkit-backdrop-filter: blur({{ card.background.backdrop_blur | default(10) }}px);
+            {% else %}
+            background: rgba(255, 255, 255, 0.95);
+            {% endif %}
+            
+            border-radius: var(--card-radius);
+            
+            /* Тень */
+            {% if card.shadow.enabled %}
+            box-shadow: {{ card.shadow.offset_x | default(0) }}px 
+                        {{ card.shadow.offset_y | default(20) }}px 
+                        {{ card.shadow.blur | default(40) }}px 
+                        {{ card.shadow.spread | default(0) }}px 
+                        {{ card.shadow.color | default('rgba(74, 79, 70, 0.15)') }};
+            {% endif %}
+            
+            padding: var(--card-padding);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Декоративная линия */
+        {% if banner.decorations.accent_line.enabled %}
+        .banner::before {
+            content: '';
+            position: absolute;
+            {% if banner.decorations.accent_line.position == 'left' %}
+            left: 0;
+            top: 15%;
+            bottom: 15%;
+            width: {{ banner.decorations.accent_line.width | default(4) }}px;
+            {% elif banner.decorations.accent_line.position == 'top' %}
+            top: 0;
+            left: 15%;
+            right: 15%;
+            height: {{ banner.decorations.accent_line.width | default(4) }}px;
+            {% endif %}
+            background: linear-gradient(180deg, 
+                var(--color-secondary) 0%, 
+                var(--color-accent) 100%);
+            border-radius: 4px;
+        }
+        {% endif %}
+        
+        /* Декоративный круг */
+        {% if banner.decorations.circles.enabled %}
+        .banner::after {
+            content: '';
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, 
+                {{ banner.decorations.circles.color | default('rgba(163, 141, 162, 0.1)') }} 0%, 
+                transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        {% endif %}
+        
+        /* ═══════════════════════════════════════════════════════════════════════════
+           ЛОГОТИП
+           ═══════════════════════════════════════════════════════════════════════════ */
+        .logo {
+            margin-bottom: 20px;
+        }
+        
+        .logo-image {
+            width: {{ brand.logo.image_width | default(240) }}px;
+            height: auto;
+            max-height: {{ brand.logo.image_height | default(120) }}px;
+            object-fit: contain;
+        }
+        
+        .logo-text {
+            font-family: var(--font-heading);
+            font-size: {{ brand.logo.font_size | default(28) }}px;
+            font-weight: {{ brand.logo.font_weight | default('700') }};
+            letter-spacing: {{ brand.logo.letter_spacing | default(3) }}px;
+            color: {{ brand.logo.color | default('#4A4F46') }};
+            text-transform: uppercase;
+        }
+        
+        .logo-subtitle {
+            font-family: var(--font-body);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            color: var(--color-text-light);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════════════
+           КОНТЕНТ
+           ═══════════════════════════════════════════════════════════════════════════ */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .greeting {
+            font-size: var(--size-body);
+            color: var(--color-text);
+        }
+        
+        .personalization {
+            font-size: var(--size-body);
+            color: var(--color-text-light);
+        }
+        
+        .role-name {
+            color: var(--color-accent);
+            font-weight: 600;
+        }
+        
+        .company-name {
+            color: var(--color-secondary);
+            font-weight: 600;
+        }
+        
+        .headline {
+            font-family: var(--font-heading);
+            font-size: var(--size-title);
+            font-weight: 600;
+            line-height: {{ fonts.line_height_heading | default(1.2) }};
+            letter-spacing: {{ fonts.letter_spacing_heading | default(0.5) }}px;
+            color: var(--color-secondary);
+            margin: 16px 0 8px;
+        }
+        
+        .subheadline {
+            font-size: var(--size-body);
+            color: var(--color-text-light);
+            margin-bottom: 12px;
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════════════
+           ФИЧИ
+           ═══════════════════════════════════════════════════════════════════════════ */
+        .features {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 16px 0;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: {{ fonts.size_features | default(16) }}px;
+            color: var(--color-text);
+        }
+        
+        .feature-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, 
+                rgba(140, 162, 155, 0.2) 0%, 
+                rgba(163, 141, 162, 0.2) 100%);
+            border-radius: 50%;
+            font-size: 14px;
+            color: var(--color-accent);
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════════════
+           КНОПКА CTA
+           ═══════════════════════════════════════════════════════════════════════════ */
+        .cta-container {
+            margin-top: auto;
+            padding-top: 20px;
+        }
+        
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: {{ cta.padding_y | default(16) }}px {{ cta.padding_x | default(32) }}px;
+            
+            {% if cta.gradient.enabled %}
+            background: linear-gradient(135deg, {{ cta.gradient.colors[0] }}, {{ cta.gradient.colors[1] }});
+            {% else %}
+            background: var(--color-button-bg);
+            {% endif %}
+            color: var(--color-button-text);
+            
+            border: none;
+            {% if cta.style == 'pill' %}
+            border-radius: 50px;
+            {% elif cta.style == 'rounded' %}
+            border-radius: 12px;
+            {% else %}
+            border-radius: 4px;
+            {% endif %}
+            
+            font-family: var(--font-body);
+            font-size: {{ cta.font_size | default(16) }}px;
+            font-weight: {{ cta.font_weight | default('600') }};
+            text-decoration: none;
+            
+            {% if cta.shadow.enabled %}
+            box-shadow: 0 {{ cta.shadow.offset_y | default(8) }}px {{ cta.shadow.blur | default(20) }}px {{ cta.shadow.color | default('rgba(140, 162, 155, 0.4)') }};
+            {% endif %}
+        }
+        
+        /* ═══════════════════════════════════════════════════════════════════════════
+           ФУТЕР
+           ═══════════════════════════════════════════════════════════════════════════ */
+        .footer {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(74, 79, 70, 0.1);
+        }
+        
+        .tagline {
+            font-family: var(--font-heading);
+            font-size: var(--size-small);
+            font-style: italic;
+            color: var(--color-text-light);
         }
     </style>
 </head>
 <body>
-    <div class="container interest-stage">
-        <h1>{{ brand.logo }}</h1>
-        <h2>Привет, {{ name }}!</h2>
-        <p>Как <span class="role-name">{{ role }}</span> в <span class="company-name">{{ company }}</span>, вы чувствуете зов к глубине?</p>
-        <p>Poznay Sebya поможет открыть аутентичное "я" через mindful support и natural harmony.</p>
-        <p class="accent">Начните путь к самопознанию уже сегодня.</p>
-        <div class="footer">Poznay Sebya — Know Yourself</div>
+    <div class="banner interest-stage">
+        <!-- Логотип -->
+        <div class="logo">
+            {% if brand.logo.image %}
+            <img src="{{ brand.logo.image }}" alt="{{ brand.name }}" class="logo-image">
+            {% elif brand.logo.text %}
+            <div class="logo-text">{{ brand.logo.text }}</div>
+            {% if brand.logo.subtitle %}
+            <div class="logo-subtitle">{{ brand.logo.subtitle }}</div>
+            {% endif %}
+            {% else %}
+            <div class="logo-text">{{ brand.name | default('BRAND') }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- Контент -->
+        <div class="content">
+            <!-- Приветствие -->
+            <p class="greeting">{{ greeting }}</p>
+            
+            <!-- Персонализация -->
+            <p class="personalization">
+                Как <span class="role-name">{{ role }}</span> в 
+                <span class="company-name">{{ company }}</span>, 
+                вы чувствуете зов к глубине?
+            </p>
+            
+            <!-- Заголовок -->
+            <h1 class="headline">{{ content.headline | default('Откройте глубину в себе') }}</h1>
+            
+            <!-- Подзаголовок -->
+            <p class="subheadline">{{ content.subheadline | default('Путь самопознания начинается с первого шага') }}</p>
+            
+            <!-- Фичи -->
+            {% if content.features %}
+            <div class="features">
+                {% for feature in content.features %}
+                <div class="feature-item">
+                    <span class="feature-icon">
+                        {% if feature.icon %}{{ feature.icon }}{% else %}{{ icons.feature_marker | default('✦') }}{% endif %}
+                    </span>
+                    <span class="feature-text">
+                        {% if feature.text %}{{ feature.text }}{% else %}{{ feature }}{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- CTA -->
+            <div class="cta-container">
+                <a href="{{ brand.website | default('#') }}" class="cta-button">
+                    {{ cta_text | default('Узнать больше →') }}
+                </a>
+            </div>
+        </div>
+        
+        <!-- Футер -->
+        <div class="footer">
+            <span class="tagline">{{ brand.tagline | default('') }}</span>
+        </div>
     </div>
 </body>
 </html>
-

@@ -1,7 +1,7 @@
 pandas
 jinja2
-weasyprint
 aiogram==3.13.1
 python-dotenv
 Pillow
-
+PyYAML
+html2image

@@ -3,24 +3,245 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deadline A</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>{{ brand.name }} — Deadline A</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    {% if fonts.google_fonts %}
+    <link href="https://fonts.googleapis.com/css2?family={{ fonts.google_fonts | join('&family=') }}&display=swap" rel="stylesheet">
+    {% else %}
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    {% endif %}
+    
     <style>
         :root {
-            --heading-font: {{ fonts.heading }};
-            --body-font: {{ fonts.body }};
+            --font-heading: '{{ fonts.heading | default("Cormorant Garamond") }}', serif;
+            --font-body: '{{ fonts.body | default("Inter") }}', sans-serif;
+            --color-primary: {{ colors.primary | default('#4A4F46') }};
+            --color-secondary: {{ colors.secondary | default('#A38DA2') }};
+            --color-accent: {{ colors.accent | default('#8CA29B') }};
+            --color-background: {{ colors.background | default('#F5F3EF') }};
+            --color-background-alt: {{ colors.background_alt | default('#E3D6C4') }};
+            --color-text: {{ colors.text_primary | default('#4A4F46') }};
+            --color-text-light: {{ colors.text_secondary | default('#6B7064') }};
+            --color-button-bg: {{ colors.button_bg | default('#8CA29B') }};
+            --color-button-text: {{ colors.button_text | default('#FFFFFF') }};
+            --color-urgency: #E8A87C;
+            --size-logo: {{ fonts.size_logo | default(28) }}px;
+            --size-title: {{ fonts.size_title | default(42) }}px;
+            --size-subtitle: {{ fonts.size_subtitle | default(26) }}px;
+            --size-body: {{ fonts.size_body | default(18) }}px;
+            --size-small: {{ fonts.size_small | default(14) }}px;
+            --card-radius: {{ card.border_radius | default(20) }}px;
+            --card-padding: {{ card.padding | default(48) }}px;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html, body {
+            width: {{ image.sizes[image.format][0] | default(1200) }}px;
+            height: {{ image.sizes[image.format][1] | default(630) }}px;
+            overflow: hidden;
+        }
+        
+        body {
+            font-family: var(--font-body);
+            font-size: var(--size-body);
+            line-height: {{ fonts.line_height | default(1.6) }};
+            color: var(--color-text);
+            background: linear-gradient(135deg, var(--color-background) 0%, var(--color-background-alt) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 32px;
+        }
+        
+        .banner {
+            position: relative;
+            width: 100%;
+            max-width: 90%;
+            min-height: 85%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: var(--card-radius);
+            box-shadow: 0 20px 40px rgba(74, 79, 70, 0.15);
+            padding: var(--card-padding);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Deadline — оранжевый акцент срочности */
+        .banner::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            background: linear-gradient(180deg, var(--color-urgency) 0%, var(--color-secondary) 100%);
+        }
+        
+        .banner::after {
+            content: '';
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 160px;
+            height: 160px;
+            background: radial-gradient(circle, rgba(232, 168, 124, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+        
+        .logo { margin-bottom: 16px; }
+        .logo-text {
+            font-family: var(--font-heading);
+            font-size: var(--size-logo);
+            font-weight: 700;
+            letter-spacing: 3px;
+            color: var(--color-primary);
+            text-transform: uppercase;
+        }
+        .logo-subtitle {
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            color: var(--color-text-light);
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+        
+        .content { flex: 1; display: flex; flex-direction: column; gap: 12px; }
+        .greeting { font-size: var(--size-body); color: var(--color-text); }
+        
+        .headline {
+            font-family: var(--font-heading);
+            font-size: var(--size-title);
+            font-weight: 600;
+            line-height: 1.2;
+            color: var(--color-secondary);
+            margin: 8px 0;
+        }
+        
+        .subheadline {
+            font-size: var(--size-body);
+            color: var(--color-text-light);
+        }
+        
+        /* Блок срочности */
+        .urgency-block {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, rgba(232, 168, 124, 0.15) 0%, rgba(163, 141, 162, 0.1) 100%);
+            border-radius: 12px;
+            border-left: 4px solid var(--color-urgency);
+            margin: 12px 0;
+        }
+        
+        .urgency-icon {
+            font-size: 28px;
+        }
+        
+        .urgency-text {
+            font-size: var(--size-subtitle);
+            font-weight: 600;
+            color: var(--color-urgency);
+        }
+        
+        /* Цена */
+        .price-block {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin: 8px 0;
+        }
+        
+        .price {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+        
+        .price-note {
+            font-size: 14px;
+            color: var(--color-text-light);
+        }
+        
+        .cta-container { margin-top: auto; padding-top: 16px; }
+        .cta-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 18px 36px;
+            background: linear-gradient(135deg, var(--color-urgency) 0%, var(--color-secondary) 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-family: var(--font-body);
+            font-size: 18px;
+            font-weight: 600;
+            text-decoration: none;
+            box-shadow: 0 10px 25px rgba(232, 168, 124, 0.4);
+        }
+        
+        .footer {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(74, 79, 70, 0.1);
+        }
+        .tagline {
+            font-family: var(--font-heading);
+            font-size: var(--size-small);
+            font-style: italic;
+            color: var(--color-text-light);
         }
     </style>
 </head>
 <body>
-    <div class="container deadline-stage">
-        <h1>{{ brand.logo }}</h1>
-        <h2>Срочное для {{ name }}!</h2>
-        <p>В <span class="company-name">{{ company }}</span> как <span class="role-name">{{ role }}</span> — limited spots (25-75k руб).</p>
-        <p>Deadline завтра: присоединяйтесь к Poznay Sebya для authentic transformation.</p>
-        <p class="accent">Не упустите шанс на natural harmony!</p>
-        <div class="footer">Poznay Sebya — Know Yourself</div>
+    <div class="banner deadline-stage">
+        <div class="logo">
+            {% if brand.logo.image %}
+            <img src="{{ brand.logo.image }}" alt="{{ brand.name }}" class="logo-image" style="width: {{ brand.logo.image_width | default(240) }}px; height: auto; max-height: {{ brand.logo.image_height | default(120) }}px; object-fit: contain;">
+            {% elif brand.logo.text %}
+            <div class="logo-text">{{ brand.logo.text }}</div>
+            {% if brand.logo.subtitle %}<div class="logo-subtitle">{{ brand.logo.subtitle }}</div>{% endif %}
+            {% else %}
+            <div class="logo-text">{{ brand.name | default('BRAND') }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="content">
+            <p class="greeting">{{ greeting }}</p>
+            
+            <h1 class="headline">{{ content.headline | default('Осталось ограниченное число мест') }}</h1>
+            <p class="subheadline">{{ content.subheadline | default('Начните свой путь уже сегодня') }}</p>
+            
+            <div class="urgency-block">
+                <span class="urgency-icon">
+                    {% if content.urgency.icon %}{{ content.urgency.icon }}{% else %}⚡{% endif %}
+                </span>
+                <span class="urgency-text">
+                    {% if content.urgency.text %}{{ content.urgency.text }}{% elif content.urgency %}{{ content.urgency }}{% else %}Только 10 мест доступно!{% endif %}
+                </span>
+            </div>
+            
+            <div class="price-block">
+                <span class="price">{{ content.price_range | default('от 25 000 ₽') }}</span>
+                <span class="price-note">индивидуальная программа</span>
+            </div>
+            
+            <div class="cta-container">
+                <a href="{{ brand.website | default('#') }}" class="cta-button">
+                    🔥 {{ cta_text | default('Записаться сейчас') }}
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <span class="tagline">{{ brand.tagline | default('') }}</span>
+        </div>
     </div>
 </body>
 </html>
-
