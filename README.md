@@ -116,8 +116,8 @@
 Скачайте проект и установите необходимые библиотеки. Откройте терминал и выполните команды:
 
 ```bash
-git clone git@github.com:neyroseti25-cell/VM_36.git
-cd VM_36
+git clone git@github.com:tatidzufri-lab/Announcement_Funnel-Automatic_distribution_of_personalized_banners_in_Telegram.git
+cd Announcement_Funnel-Automatic_distribution_of_personalized_banners_in_Telegram
 pip install -r requirements.txt
 ```
 
