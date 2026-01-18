@@ -68,3 +68,7 @@ tmp/
 *.bak
 *_backup_*
 *_FIXED_*
+
+# User-specific files (personal branding)
+profiles/custom.yaml
+assets/logos/my_logo.png
