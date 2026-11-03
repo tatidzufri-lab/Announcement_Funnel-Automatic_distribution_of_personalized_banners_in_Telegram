@@ -1,0 +1,27 @@
+# Это не постоянно работающий сервис, а разовая задача: скрипт отрабатывает и выходит.
+# Поэтому у сервиса профиль manual — обычный `docker compose up -d` его не поднимет.
+#
+# Сборка:            docker compose build funnel
+#   Имя сервиса обязательно: без него команда напишет "No services to build"
+#   и завершится успешно, ничего не собрав, потому что профиль manual неактивен.
+# Прогон без отправки: docker compose run --rm funnel
+# Реальная рассылка:   docker compose run --rm funnel python3 bot_funnel.py --send --brand wellness
+# Список профилей:     docker compose run --rm funnel python3 bot_funnel.py --list-profiles
+
+services:
+  funnel:
+    build:
+      context: .
+      args:
+        APP_UID: "${APP_UID:-1000}"
+    image: announcement-funnel
+    profiles: ["manual"]
+    env_file: .env
+    environment:
+      - TZ=Europe/Moscow
+    volumes:
+      - ./users.csv:/app/users.csv:ro
+      - ./output:/app/output
+      - ./profiles:/app/profiles:ro
+      - ./assets:/app/assets:ro
+    mem_limit: 900m

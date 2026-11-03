@@ -191,11 +191,18 @@ def html_to_png(html_str: str, stage: str, user_id: int, output_dir: str,
             # Создаём временную директорию для html2image
             temp_output = tempfile.mkdtemp()
             
-            hti = Html2Image(
-                output_path=temp_output,
-                size=(width, height),
-                custom_flags=['--no-sandbox', '--disable-gpu', '--hide-scrollbars']
-            )
+            hti_kwargs = {
+                'output_path': temp_output,
+                'size': (width, height),
+                'custom_flags': ['--no-sandbox', '--disable-gpu', '--hide-scrollbars'],
+            }
+            # В контейнере путь к Chromium задаётся явно: автопоиск html2image
+            # находит не все варианты имени бинарника в Debian-образах
+            chrome_bin = os.getenv('CHROME_BIN')
+            if chrome_bin:
+                hti_kwargs['browser_executable'] = chrome_bin
+            
+            hti = Html2Image(**hti_kwargs)
             
             # Рендерим HTML в PNG
             hti.screenshot(
@@ -259,15 +266,24 @@ def _pillow_fallback(html_str: str, stage: str, user_id: int, output_dir: str,
         b = int(bg1[2] * (1 - ratio) + bg2[2] * ratio)
         draw.line([(0, y), (width, y)], fill=(r, g, b))
     
-    # Загружаем шрифты
-    try:
-        font_large = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 
-                                        fonts_config.get('size_title', 42))
-        font_medium = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 
-                                         fonts_config.get('size_subtitle', 26))
-        font_small = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 
-                                        fonts_config.get('size_body', 18))
-    except:
+    # Загружаем шрифты. Порядок: macOS, затем типовые пути Linux-контейнера.
+    # Кириллица обязана поддерживаться, иначе текст превратится в квадраты.
+    font_candidates = [
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+    ]
+    font_large = font_medium = font_small = None
+    for font_path in font_candidates:
+        try:
+            font_large = ImageFont.truetype(font_path, fonts_config.get('size_title', 42))
+            font_medium = ImageFont.truetype(font_path, fonts_config.get('size_subtitle', 26))
+            font_small = ImageFont.truetype(font_path, fonts_config.get('size_body', 18))
+            break
+        except OSError:
+            continue
+    if font_large is None:
         font_large = ImageFont.load_default()
         font_medium = font_large
         font_small = font_large
